@@ -17,6 +17,13 @@
 - 安全沙盒
 - 多语言（C++ Python Go）
 
+## TL;DR
+
+如果要编译代码，请安装 libseccomp
+
+`sudo apt install libseccomp-dev libseccomp2 seccomp`
+
+
 ## 安全措施
 
 一定要做好安全措施，这样才不会被日穿。
@@ -51,3 +58,4 @@ https://google.github.io/styleguide/cppguide.html
 ## 好文分享
 
 https://blog.cloudflare.com/sandboxing-in-linux-with-zero-lines-of-code/
+https://veritas501.space/2018/05/05/seccomp%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/
