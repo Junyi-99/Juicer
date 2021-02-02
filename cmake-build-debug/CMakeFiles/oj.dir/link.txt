@@ -1,0 +1,1 @@
+/usr/bin/c++  -g   CMakeFiles/oj.dir/main.cpp.o CMakeFiles/oj.dir/lang/cpp.cpp.o CMakeFiles/oj.dir/lang/java.cpp.o CMakeFiles/oj.dir/lang/go.cpp.o CMakeFiles/oj.dir/lang/python2.cpp.o CMakeFiles/oj.dir/lang/python3.cpp.o CMakeFiles/oj.dir/lang/c.cpp.o  -o oj  -lseccomp 
