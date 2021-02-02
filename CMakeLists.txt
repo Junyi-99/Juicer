@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
-project(oj)
+project(juicer)
 
 set(CMAKE_CXX_STANDARD 14)
 
 link_libraries(seccomp)
 
-add_executable(oj main.cpp lang/base.h lang/cpp.cpp lang/cpp.h lang/java.cpp lang/java.h lang/go.cpp lang/go.h lang/python2.cpp lang/python2.h lang/python3.cpp lang/python3.h lang/c.cpp lang/c.h third_party/argh.h)
+add_executable(juicer main.cpp lang/base.h lang/cpp.cpp lang/cpp.h lang/java.cpp lang/java.h lang/go.cpp lang/go.h lang/python2.cpp lang/python2.h lang/python3.cpp lang/python3.h lang/c.cpp lang/c.h third_party/argh.h sandbox.cpp sandbox.h)
