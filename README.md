@@ -10,7 +10,11 @@
 
 ## 安全措施
 
-一定要做好安全措施，已知的攻击方式主要分为两种
+一定要做好安全措施，这样才不会被日穿。
+
+Juicer 除了拥有 Sandbox 功能，还运行在 Docker 环境内，方便万一哪天炸了可以迅速重启恢复。
+
+已知的攻击方式主要分为两种
 
 **编译时攻击**
 
@@ -34,3 +38,7 @@
 
 ## 代码规范
 https://google.github.io/styleguide/cppguide.html
+
+## 好文分享
+
+https://blog.cloudflare.com/sandboxing-in-linux-with-zero-lines-of-code/
