@@ -1,4 +1,9 @@
-//
-// Created by Junyi Hou on 2/3/21.
-//
-
+int main() {
+    struct x struct z<x(x(x(x(x(x(x(x(x(x(x(x(x(x(x(y,x(y><y*,x(y*w>v<y*,w,x{}
+    return 0;
+}
+/*
+ * Resolve:
+ *
+ * -fmax-errors=10
+ * */

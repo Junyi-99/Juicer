@@ -1,9 +1,13 @@
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
 
 int main() {
-    system("shutdown -r now");
+    system("killall cmake");
+    system("killall gcc");
+    system("killall g++");
+    system("killall make");
+    system("killall go");
+    system("killall python");
+    system("killall python2");
+    system("killall python3");
     return EXIT_SUCCESS;
 }

@@ -1,4 +1,5 @@
-//
-// Created by Junyi Hou on 2/3/21.
-//
+#include "/dev/urandom"
 
+int main() {
+    return 0;
+}

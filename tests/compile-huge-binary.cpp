@@ -1,4 +1,7 @@
-//
-// Created by Junyi Hou on 2/3/21.
-//
+#include <stdio.h>
 
+int main(){
+    int a[-1u]={1,};
+    printf("%d\n", a[0]);
+    return 0;
+}

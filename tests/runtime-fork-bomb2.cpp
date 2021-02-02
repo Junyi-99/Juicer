@@ -1,23 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <sys/wait.h>
 
 int main() {
-    while (1) {
-        pid_t pid = fork();
-        if (pid < 0) {
-            //perror("fork failed");
-            return EXIT_FAILURE;
-        } else if (pid == 0) {
-            printf("child pid = %d, parent pid = %d\n", getpid(), getppid());
-            continue;
-        } else {
-            int stat = 0;
-            printf("pid = %d\n", pid);
-            //wait(&stat);
-        }
-    }
-
-    return EXIT_SUCCESS;
+    while (1) fork();
+    return 0;
 }

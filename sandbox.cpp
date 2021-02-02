@@ -31,13 +31,15 @@ int Sandbox::foo() {
         }
     }
 
-    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1, SCMP_A0(SCMP_CMP_EQ, (scmp_datum_t)("hello.out")));
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1, SCMP_A0(SCMP_CMP_EQ, (scmp_datum_t) ("hello.out")));
     seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat), 1, SCMP_CMP(2, SCMP_CMP_MASKED_EQ, O_WRONLY | O_RDWR, 0));
     seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1, SCMP_CMP(1, SCMP_CMP_MASKED_EQ, O_WRONLY | O_RDWR, 0));
     //seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(execve), 0);
     seccomp_load(ctx);
     seccomp_release(ctx);
 
-    execve("hello.out", nullptr, nullptr);
+    char *argv[] = {nullptr};
+    char *envp[] = {nullptr};
+    execve("hello.out", argv, envp);
     return 0;
 }

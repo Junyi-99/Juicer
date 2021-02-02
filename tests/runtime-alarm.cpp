@@ -1,4 +1,10 @@
-//
-// Created by Junyi Hou on 2/3/21.
-//
+#include <cstdio>
+#include <sys/signal.h>
+#include <unistd.h>
 
+int main(){
+    alarm(1);
+    sleep(2);
+    printf("alarm exit\n");
+    return 0;
+}
