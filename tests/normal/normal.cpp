@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstring>
 #include <vector>
+
 #define F(x) ((x) / 3 + ((x) % 3 == 1 ? 0 : tb))
 #define G(x) ((x) < tb ? (x) * 3 + 1 : ((x) - tb) * 3 + 2)
 using namespace std;
@@ -59,70 +60,69 @@ void getheight() {
         for (k ? k-- : 0, j = sa[r[i] - 1]; s[i + k] == s[j + k]; k++);
 }
 
-void RMQ_init(){
-    for(int i = 1; i <= n; i++)d[i][0] = h[i];
-    for(int j = 1; (1 << j) <= n; j++){
-        for(int i = 1; i + (1 << j) - 1 <= n; i++){
+void RMQ_init() {
+    for (int i = 1; i <= n; i++)d[i][0] = h[i];
+    for (int j = 1; (1 << j) <= n; j++) {
+        for (int i = 1; i + (1 << j) - 1 <= n; i++) {
             d[i][j] = min(d[i][j - 1], d[i + (1 << (j - 1))][j - 1]);
         }
     }
 }
 
-int RMQ(int l, int r){
-    if(l > r) swap(l, r);
+int RMQ(int l, int r) {
+    if (l > r) swap(l, r);
     int k = 0;
-    while((1 << (k + 1)) <= r - l + 1)k++;
+    while ((1 << (k + 1)) <= r - l + 1)k++;
     return min(d[l][k], d[r - (1 << k) + 1][k]);
 }
 
-int query(int L, int R){
+int query(int L, int R) {
     int x = r[L], y = r[R];
-    if(x > y) swap(x, y);
+    if (x > y) swap(x, y);
     x++;
     return RMQ(x, y);
 }
 
-int main(){
+int main() {
     int kase = 0;
-    while(~scanf("%s", ch) && ch[0] != '#'){
+    while (~scanf("%s", ch) && ch[0] != '#') {
         n = strlen(ch);
-        for(int i = 0; i < n; i++)s[i] = ch[i] - 'a' + 1;
+        for (int i = 0; i < n; i++)s[i] = ch[i] - 'a' + 1;
         s[n] = 0;
         dc3(s, sa, n + 1, 40);
         getheight();
         RMQ_init();
         int ans = 1;
-        for(int len = 1; len <= n; len++){
-            for(int j = 0; j + len < n; j += len){
+        for (int len = 1; len <= n; len++) {
+            for (int j = 0; j + len < n; j += len) {
                 int lcp = query(j, j + len);
                 int t = lcp / len + 1;
                 int k = j - (len - lcp % len);
-                if(k >= 0 && query(k, k + len) >= len)t++;
-                if(ans < t){
+                if (k >= 0 && query(k, k + len) >= len)t++;
+                if (ans < t) {
                     ans = t;
                     res.clear();
                     res.push_back(len);
-                }
-                else if(ans == t){
+                } else if (ans == t) {
                     res.push_back(len);
                 }
             }
         }
         printf("Case %d: ", ++kase);
-        for(int i = 1; i <= n; i++){
+        for (int i = 1; i <= n; i++) {
             bool flag = false;
-            for(int j = 0; j < res.size(); j++){
+            for (int j = 0; j < res.size(); j++) {
                 //printf("%d\n", res[j]);
-                if(query(sa[i], sa[i] + res[j]) >= (ans - 1) * res[j]){
+                if (query(sa[i], sa[i] + res[j]) >= (ans - 1) * res[j]) {
                     flag = true;
-                    for(int k = sa[i]; k < sa[i] + res[j] * ans; k++){
+                    for (int k = sa[i]; k < sa[i] + res[j] * ans; k++) {
                         putchar(ch[k]);
                     }
                     puts("");
                     break;
                 }
             }
-            if(flag)break;
+            if (flag)break;
         }
     }
     return 0;

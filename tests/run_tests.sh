@@ -19,5 +19,5 @@
 #./juicer --language=cpp --sourcecode=./runtime-timeout.cpp
 
 
-
+mv /tmp/tmp.7TpESdgFAE/cmake-build-debug/juicer /tmp/tmp.7TpESdgFAE/tests; ./juicer --run-time-limit=1000 --case-in=1.in,2.in --case-out=1.out,2.out --language=cpp --sourcecode=./normal.cpp
 

@@ -4,7 +4,7 @@
 #include <sys/wait.h>
 
 int main() {
-    int a = -1;
+    int a = 0;
     printf("%d", 5 / a);
     return EXIT_SUCCESS;
 }

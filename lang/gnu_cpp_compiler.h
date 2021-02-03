@@ -23,12 +23,11 @@ namespace JuicerLang {
             return instance;
         }
 
-        int compile(const string &source_code) override;
+        int compile() override;
 
-        int run(const string &input, string &output, uint32_t limit_time,
-                uint32_t limit_stack, uint32_t limit_memory, uint32_t limit_output) override;
+        int run(const string &input) override;
 
-        int diff(const string &input, const string &output) override;
+        int diff(const string &standard_output) override;
 
         int setRules() override;
     };

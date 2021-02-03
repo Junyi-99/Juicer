@@ -8,47 +8,39 @@
 #include <string>
 #include <algorithm>
 #include "../sandbox.h"
+#include "../helper.h"
 
 using std::string;
 
 namespace JuicerLang {
-    class NotImplementedException : public std::exception {
-    public:
-        explicit NotImplementedException(const char *error = "Function not yet implemented.") {
-            errorMessage = error;
-        }
-
-        const char *what() const noexcept override {
-            return errorMessage.c_str();
-        }
-
-    private:
-        std::string errorMessage;
-    };
 
     class Base {
     public:
-        Base() {
-            lang_name = "none";
-            binary_path = "none";
-        }
 
         virtual /* 编译指定程序 */
-        int compile(string const &source_code) { throw NotImplementedException(); }
+        int compile() { throw NotImplementedException(); }
 
-        virtual /* 在沙盒中运行程序 */
-        int run(const string &input, string &output, uint32_t limit_time,
-                uint32_t limit_stack, uint32_t limit_memory, uint32_t limit_output) { throw NotImplementedException(); }
+        /* 在沙盒中运行程序，output 会被自动记录在私有成员里*/
+        virtual int run(const string &input) { throw NotImplementedException(); }
 
-        virtual /* 比较 input 和 output 是否相同 */
-        int diff(string const &input, string const &output) { throw NotImplementedException(); }
+        /* 比较 input 和 output 是否相同 */
+        virtual int diff(const string &standard_output) { throw NotImplementedException(); }
 
         virtual /* 设置 seccomp 规则，每个语言都要自己设置一份 */
         int setRules() { throw NotImplementedException(); }
 
-        /* 设置语言名（全小写） */
-        void setLang(string name) {
-            std::transform(name.begin(), name.end(), this->lang_name.begin(), ::tolower);
+        void
+        set_configs(const string &code_source, const uint32_t &compile_time_limit, const uint32_t &run_time_limit,
+                    const uint32_t &stack_limit, const uint32_t &memory_limit, const uint32_t &output_limit,
+                    const vector<string> &in_cases, const vector<string> &out_cases) {
+            this->source_code = code_source;
+            this->limit_stack = stack_limit;
+            this->limit_output = output_limit;
+            this->limit_memory = memory_limit;
+            this->limit_run_time = run_time_limit;
+            this->limit_compile_time = compile_time_limit;
+            this->cases_in = in_cases;
+            this->cases_out = out_cases;
         }
 
         /* 获取语言名 */
@@ -57,8 +49,19 @@ namespace JuicerLang {
         };
 
     protected:
-        string lang_name;
-        string binary_path;
+        string source_code = "none";
+        uint32_t limit_compile_time = 0; // ms, default 3000ms
+        uint32_t limit_run_time = 0;     // ms, default 1000ms
+        uint32_t limit_stack = 0;        // KBytes, default 262,144 KBytes (256MB)
+        uint32_t limit_memory = 0;       // KBytes, default 262,144 KBytes (256MB)
+        uint32_t limit_output = 0;       // KBytes, default 1024 KBytes (10KB)
+        vector<string> cases_in;
+        vector<string> cases_out;
+        string output_file = "output.txt"; /* 重定向 stdout 到这个文件 */
+
+    protected:
+        string lang_name = "none";
+        string binary_path = "none"; /* 编译后生成的二进制文件路径 */
     };
 }
 

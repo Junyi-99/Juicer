@@ -7,7 +7,6 @@
 #include <cstring>
 #include "sandbox.h"
 
-#include "lang/gnu_c_compiler.h"
 #include "lang/gnu_cpp_compiler.h"
 
 #include "third_party/argh.h"
@@ -22,7 +21,7 @@ void signal_handler(int sig) {
     int stat = 0;
     if (sig == SIGCHLD) {
         rusage usage{};
-        printf("child exit\n");
+        //printf("child exit\n");
         wait(&stat);
     }
 }
@@ -30,7 +29,7 @@ void signal_handler(int sig) {
 int main(int argc, char *argv[]) {
 
     std::vector<JuicerLang::Base *> supported_lang = {
-            &JuicerLang::GNU_c_compiler::getInstance(),
+            // &JuicerLang::GNU_c_compiler::getInstance(),
             &JuicerLang::GNU_cpp_compiler::getInstance(),
     };
 
@@ -43,6 +42,9 @@ int main(int argc, char *argv[]) {
     string program;
     string source_code;
     string language;
+
+    string case_in;
+    string case_out;
 
     uint32_t limit_compile_time = 0; // ms, default 3000ms
     uint32_t limit_run_time = 0;     // ms, default 1000ms
@@ -71,13 +73,32 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    cmd("--compile-time-limit", 3000) >> limit_compile_time;
-    cmd("--run-time-limit", 1000) >> limit_run_time;
-    cmd("--stack-limit", 256 * 1024) >> limit_stack;
-    cmd("--memory-limit", 256 * 1024) >> limit_memory;
-    cmd("--output-limit", 1024) >> limit_output;
+    if (!(cmd("--case-in") >> case_in)) {
+        cerr << "Must provide case in" << endl;
+        exit(1);
+    }
 
-    int ret;
+    if (!(cmd("--case-out") >> case_out)) {
+        cerr << "Must provide case out" << endl;
+        exit(1);
+    }
+
+    vector<string> cases_in;
+    vector<string> cases_out;
+
+    cases_in = JuicerHelper::split(case_in);
+    cases_out = JuicerHelper::split(case_out);
+    if (cases_in.size() != cases_out.size()) {
+        cerr << "The number of case in and case out are not match." << endl;
+        exit(1);
+    }
+
+    cmd("--limit-compile-time-ms", 3000) >> limit_compile_time;
+    cmd("--limit-run-time-ms", 1000) >> limit_run_time;
+    cmd("--limit-stack-kb", 256 * 1024) >> limit_stack;
+    cmd("--limit-memory-kb", 256 * 1024) >> limit_memory;
+    cmd("--limit-output-kb", 4096) >> limit_output;
+
     JuicerLang::Base *lang = nullptr;
 
     for (auto &i: supported_lang) if (i->getLang() == language) lang = i;
@@ -88,28 +109,18 @@ int main(int argc, char *argv[]) {
 
     /* Read the file, compile it. */
     source_code = JuicerHelper::read_file(program);
-    ret = lang->compile(source_code);
-    if (ret != 0) {
-        printf("compiling failed, ret = %d\n", ret);
-    } else {
-        printf("compile finished.\n");
-    }
 
-    /* Run the compiled target */
-    string output;
-    ret = lang->run("", output, limit_run_time, limit_stack, limit_memory, limit_output);
-    if (ret != 0) {
-        printf("running failed, ret = %d\n", ret);
-    } else {
-        printf("running finished.\n");
-    }
-
-    /* Check the result. */
-    ret = lang->diff("", "");
-    if (ret != 0) {
-        printf("diffing failed, ret = %d\n", ret);
-    } else {
-        printf("diffing finished.\n");
+    try {
+        lang->set_configs(source_code, limit_compile_time, limit_run_time,
+                          limit_stack, limit_memory, limit_output,
+                          cases_in, cases_out);
+        lang->compile();
+        for (int i = 0; i < cases_in.size(); i++) {
+            lang->run(cases_in[i]);
+            lang->diff(cases_out[i]);
+        }
+    } catch (const char *msg) {
+        cerr << msg << endl;
     }
 
     wait(nullptr);

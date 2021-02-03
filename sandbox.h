@@ -25,6 +25,9 @@ namespace JuicerSandbox {
     不限制 system call 的调用
     该方法可以用于编译控制，以及目标程序控制
 
+     fd_in 你想让它的 stdin 从哪读？
+     fd_out 你想让它写到哪里？
+     fd_err 你想让它错误输出到哪？
     limit_time: ms
     limit_stack: KB
     limit_memory: KB
@@ -40,14 +43,5 @@ namespace JuicerSandbox {
                             uint32_t limit_memory, uint32_t limit_output, bool enable_sandbox);
 
 }
-
-
-class Sandbox {
-public:
-    int foo();
-
-
-};
-
 
 #endif //OJ_SANDBOX_H
