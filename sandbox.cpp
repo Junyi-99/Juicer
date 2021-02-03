@@ -7,17 +7,40 @@
 #include "sandbox.h"
 
 namespace JuicerSandbox {
+    int white[] = {
+            SCMP_SYS(exit_group),
+            SCMP_SYS(brk),
+            SCMP_SYS(arch_prctl),
+            SCMP_SYS(access),
+            SCMP_SYS(openat),
+            SCMP_SYS(fstat),
+            SCMP_SYS(mmap),
+            SCMP_SYS(munmap),
+            SCMP_SYS(close),
+            SCMP_SYS(read),
+            SCMP_SYS(pread64),
+            SCMP_SYS(write),
+            SCMP_SYS(mprotect),
+    };
 
-    void *timeout_killer(void *pid) {
-        pid_t p = *(pid_t *) pid;
-        //printf("monitoring %d\n", p);
+    struct arg_struct {
+        pid_t pgid;          // process group id
+        uint32_t sleep_time; // ms
+    };
+
+    void *timeout_killer(void *args) {
+        auto *p = (struct arg_struct *) args;
+
         if (pthread_detach(pthread_self()) != 0) {
-            killpg(p, SIGKILL);
+            killpg(p->pgid, SIGKILL);
             perror("pthread_detach");
             exit(1);
         }
-        usleep(1000 * 1000);
-        killpg(p, SIGKILL);
+
+        usleep(p->sleep_time * 1000);
+
+        printf("wake up and kill -%d\n", p->pgid);
+        killpg(p->pgid, SIGKILL);
         return nullptr;
     }
 
@@ -25,11 +48,13 @@ namespace JuicerSandbox {
                             const string &path, char *const argv[],
                             char *const envp[],
                             uint32_t limit_time, uint32_t limit_stack,
-                            uint32_t limit_memory, uint32_t limit_output) {
+                            uint32_t limit_memory, uint32_t limit_output, bool enable_sandbox) {
         pid_t pid = fork();
+
         if (pid < 0) {
             printf("fork failed\n");
             exit(1);
+
         } else if (pid == 0) {
             // child
             struct rlimit rlimit_nproc{
@@ -62,68 +87,55 @@ namespace JuicerSandbox {
             ret[4] = setrlimit(RLIMIT_FSIZE, &rlimit_output);
 
             for (int i : ret) {
-                if (i != 0) return 1;
+                if (i != 0) throw "set rlimit failed";
             }
 
             setpgid(getpid(), getpid());
             //execve(path.c_str(), argv, envp);
+
+            if (enable_sandbox) {
+                scmp_filter_ctx ctx;
+                if ((ctx = seccomp_init(SCMP_ACT_KILL)) == nullptr) {
+                    throw "seccomp_init failed";
+                }
+                for (int i : white) {
+                    if (seccomp_rule_add(ctx, SCMP_ACT_ALLOW, i, 0) != 0) {
+                        throw "seccomp_rule_add failed";
+                    }
+                }
+
+                seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1,
+                                 SCMP_A0(SCMP_CMP_EQ, (scmp_datum_t) (path.c_str())));
+                seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat), 1,
+                                 SCMP_CMP(2, SCMP_CMP_MASKED_EQ, O_WRONLY | O_RDWR, 0));
+                seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
+                                 SCMP_CMP(1, SCMP_CMP_MASKED_EQ, O_WRONLY | O_RDWR, 0));
+                if (seccomp_load(ctx) != 0) throw "seccomp_load failed";
+                seccomp_release(ctx); // does not return a value
+            }
+
             execvp(path.c_str(), argv);
         } else {
             // parent
+            int ret, status;
             pthread_t monitor = 0;
-            int ret = pthread_create(&monitor, nullptr, timeout_killer, reinterpret_cast<void *>(&pid));
+            struct arg_struct args{
+                    pid,
+                    limit_time
+            };
+
+            ret = pthread_create(&monitor, nullptr, timeout_killer, reinterpret_cast<void *>(&args));
             if (ret != 0) {
                 perror("pthread_create");
                 killpg(pid, SIGKILL);
                 exit(1);
             }
 
-            int status;;
-            //printf("waiting child\n");
             waitpid(pid, &status, WUNTRACED | WCONTINUED);
-            return 0;
+            return status;
         }
+
         // no one can execute here.
         exit(1);
     }
-}
-
-int Sandbox::foo() {
-    int white[] = {
-            SCMP_SYS(exit_group),
-            SCMP_SYS(brk),
-            SCMP_SYS(arch_prctl),
-            SCMP_SYS(access),
-            SCMP_SYS(openat),
-            SCMP_SYS(fstat),
-            SCMP_SYS(mmap),
-            SCMP_SYS(munmap),
-            SCMP_SYS(close),
-            SCMP_SYS(read),
-            SCMP_SYS(pread64),
-            SCMP_SYS(write),
-            SCMP_SYS(mprotect),
-    };
-
-    scmp_filter_ctx ctx;
-    if ((ctx = seccomp_init(SCMP_ACT_KILL)) == nullptr) {
-        return 1;
-    }
-    for (int i : white) {
-        if (seccomp_rule_add(ctx, SCMP_ACT_ALLOW, i, 0) != 0) {
-            return 1;
-        }
-    }
-
-    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1, SCMP_A0(SCMP_CMP_EQ, (scmp_datum_t) ("hello.out")));
-    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat), 1, SCMP_CMP(2, SCMP_CMP_MASKED_EQ, O_WRONLY | O_RDWR, 0));
-    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1, SCMP_CMP(1, SCMP_CMP_MASKED_EQ, O_WRONLY | O_RDWR, 0));
-    //seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(execve), 0);
-    seccomp_load(ctx);
-    seccomp_release(ctx);
-
-    char *argv[] = {nullptr};
-    char *envp[] = {nullptr};
-    execve("hello.out", argv, envp);
-    return 0;
 }

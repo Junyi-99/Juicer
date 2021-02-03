@@ -25,8 +25,8 @@ namespace JuicerLang {
 
         int compile(const string &source_code) override;
 
-        int
-        run(const string &path, const string &args, const string &env, const string &input, string &output) override;
+        int run(const string &input, string &output, uint32_t limit_time,
+                uint32_t limit_stack, uint32_t limit_memory, uint32_t limit_output) override;
 
         int diff(const string &input, const string &output) override;
 

@@ -19,6 +19,7 @@ using std::vector;
 namespace JuicerSandbox {
     void *timeout_killer(void *pid);
 
+
     /*
     内部进行 fork，并且开启线程监视被执行程序
     不限制 system call 的调用
@@ -36,7 +37,7 @@ namespace JuicerSandbox {
     int run_with_constrains(int fd_in, int fd_out, int fd_err,
                             const string &path, char *const argv[], char *const envp[],
                             uint32_t limit_time, uint32_t limit_stack,
-                            uint32_t limit_memory, uint32_t limit_output);
+                            uint32_t limit_memory, uint32_t limit_output, bool enable_sandbox);
 
 }
 

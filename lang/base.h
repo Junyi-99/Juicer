@@ -30,14 +30,15 @@ namespace JuicerLang {
     public:
         Base() {
             lang_name = "none";
+            binary_path = "none";
         }
 
         virtual /* 编译指定程序 */
         int compile(string const &source_code) { throw NotImplementedException(); }
 
         virtual /* 在沙盒中运行程序 */
-        int run(string const &path, string const &args, string const &env,
-                string const &input, string &output) { throw NotImplementedException(); }
+        int run(const string &input, string &output, uint32_t limit_time,
+                uint32_t limit_stack, uint32_t limit_memory, uint32_t limit_output) { throw NotImplementedException(); }
 
         virtual /* 比较 input 和 output 是否相同 */
         int diff(string const &input, string const &output) { throw NotImplementedException(); }
@@ -57,6 +58,7 @@ namespace JuicerLang {
 
     protected:
         string lang_name;
+        string binary_path;
     };
 }
 

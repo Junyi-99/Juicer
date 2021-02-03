@@ -15,5 +15,5 @@ add_executable(juicer main.cpp
         lang/python3.cpp lang/python3.h
         lang/gnu_c_compiler.cpp lang/gnu_c_compiler.h
         third_party/argh.h
-        sandbox.cpp sandbox.h)
+        sandbox.cpp sandbox.h helper.cpp helper.h)
 

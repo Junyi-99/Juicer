@@ -4,20 +4,20 @@
 
 #include <fstream>
 #include "gnu_cpp_compiler.h"
+#include "../helper.h"
 
 
 int JuicerLang::GNU_cpp_compiler::compile(const string &source_code) {
-    printf("GNU C++ COMPILER\n");
+    //printf("USING GNU C++ COMPILER\n");
+    JuicerHelper::write_file("main.cpp", source_code);
 
-    std::ofstream out("main.cpp");
-    out << source_code;
-    out.close();
+    this->binary_path = "./main"; // output binary path
 
     char *path = (char *) "/usr/bin/g++";
     char *const args[] = {path,
                           (char *) "main.cpp",
                           (char *) "-o",
-                          (char *) "main",
+                          (char *) this->binary_path.c_str(),
                           (char *) "-fmax-errors=5",
                           (char *) "-fno-asm",
                           (char *) "-DONLINE_JUDGE",
@@ -27,15 +27,22 @@ int JuicerLang::GNU_cpp_compiler::compile(const string &source_code) {
                           (char *) "-lm",
                           nullptr};
     char *const envp[] = {nullptr};
-    JuicerSandbox::run_with_constrains(0, 1, 2, path, args, envp, 5000,
-                                       128 * 1024, 128 * 1024, 1024);
-    return 0;
+
+    // compiler should not enable sandbox
+    return JuicerSandbox::run_with_constrains(0, 1, 2,
+                                              path, args, envp,
+                                              5000, 256 * 1024, 256 * 1024, 1024, false);
 }
 
 int
-JuicerLang::GNU_cpp_compiler::run(const string &path, const string &args, const string &env, const string &input,
-                                  string &output) {
-    return 0;
+JuicerLang::GNU_cpp_compiler::run(const string &input, string &output, uint32_t limit_time,
+                                  uint32_t limit_stack, uint32_t limit_memory, uint32_t limit_output) {
+
+    char *const args[] = {(char *) this->binary_path.c_str(), nullptr};
+    char *const envp[] = {nullptr};
+    return JuicerSandbox::run_with_constrains(0, 1, 2,
+                                              this->binary_path, args, envp,
+                                              limit_time, limit_stack, limit_memory, limit_output, true);
 }
 
 int JuicerLang::GNU_cpp_compiler::diff(const string &input, const string &output) {
