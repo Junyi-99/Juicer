@@ -2,7 +2,91 @@
 // Created by Junyi Hou on 2/2/21.
 //
 
+#include <csignal>
+#include <wait.h>
 #include "sandbox.h"
+
+namespace JuicerSandbox {
+
+    void *timeout_killer(void *pid) {
+        pid_t p = *(pid_t *) pid;
+        //printf("monitoring %d\n", p);
+        if (pthread_detach(pthread_self()) != 0) {
+            killpg(p, SIGKILL);
+            perror("pthread_detach");
+            exit(1);
+        }
+        usleep(1000 * 1000);
+        killpg(p, SIGKILL);
+        return nullptr;
+    }
+
+    int run_with_constrains(int fd_in, int fd_out, int fd_err,
+                            const string &path, char *const argv[],
+                            char *const envp[],
+                            uint32_t limit_time, uint32_t limit_stack,
+                            uint32_t limit_memory, uint32_t limit_output) {
+        pid_t pid = fork();
+        if (pid < 0) {
+            printf("fork failed\n");
+            exit(1);
+        } else if (pid == 0) {
+            // child
+            struct rlimit rlimit_nproc{
+                    10000,
+                    10000
+            };
+            struct rlimit rlimit_time{
+                    (limit_time + 1000) / 1000,
+                    (limit_time + 1000) / 1000
+            };
+            struct rlimit rlimit_stack{
+                    limit_stack * 1024,
+                    limit_stack * 1024,
+            };
+            struct rlimit rlimit_memory{
+                    limit_memory * 1024,
+                    limit_memory * 1024
+            };
+            struct rlimit rlimit_output{
+                    limit_output * 1024,
+                    limit_output * 1024
+            };
+
+            int ret[5] = {0};
+            /* RLIMIT_CPU 不统计使用了 sleep() 的程序，所以必须靠另外线程来侦测运行时间 */
+            ret[0] = setrlimit(RLIMIT_CPU, &rlimit_time);
+            ret[1] = setrlimit(RLIMIT_STACK, &rlimit_stack);
+            ret[2] = setrlimit(RLIMIT_DATA, &rlimit_memory);
+            ret[3] = setrlimit(RLIMIT_NPROC, &rlimit_nproc);
+            ret[4] = setrlimit(RLIMIT_FSIZE, &rlimit_output);
+
+            for (int i : ret) {
+                if (i != 0) return 1;
+            }
+
+            setpgid(getpid(), getpid());
+            //execve(path.c_str(), argv, envp);
+            execvp(path.c_str(), argv);
+        } else {
+            // parent
+            pthread_t monitor = 0;
+            int ret = pthread_create(&monitor, nullptr, timeout_killer, reinterpret_cast<void *>(&pid));
+            if (ret != 0) {
+                perror("pthread_create");
+                killpg(pid, SIGKILL);
+                exit(1);
+            }
+
+            int status;;
+            //printf("waiting child\n");
+            waitpid(pid, &status, WUNTRACED | WCONTINUED);
+            return 0;
+        }
+        // no one can execute here.
+        exit(1);
+    }
+}
 
 int Sandbox::foo() {
     int white[] = {

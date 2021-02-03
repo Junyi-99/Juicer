@@ -15,7 +15,7 @@
 - CLI 支持
 - 远程 Socket
 - 安全沙盒
-- 多语言（C++ Python Go）
+- 多语言（GNU_c_compiler++ Python Go）
 
 ## TL;DR
 

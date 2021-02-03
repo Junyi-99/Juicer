@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <unistd.h>
+
 int main() {
     unsigned long long counter = 0;
     while (1) {
         printf("%llu\n", counter++);
-        sleep(1);
+        usleep(500 * 1000); // 500 ms
         if (counter < 0)
             break;
     }

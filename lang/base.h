@@ -7,19 +7,43 @@
 
 #include <string>
 #include <algorithm>
+#include "../sandbox.h"
+
 using std::string;
 
 namespace JuicerLang {
+    class NotImplementedException : public std::exception {
+    public:
+        explicit NotImplementedException(const char *error = "Function not yet implemented.") {
+            errorMessage = error;
+        }
+
+        const char *what() const noexcept override {
+            return errorMessage.c_str();
+        }
+
+    private:
+        std::string errorMessage;
+    };
+
     class Base {
     public:
-        /* 编译指定程序 */
-        virtual int compile(string source_code, string args) = 0;
+        Base() {
+            lang_name = "none";
+        }
 
-        /* 在沙盒中运行程序 */
-        virtual int run(string path, string args, string input, string &output) = 0;
+        virtual /* 编译指定程序 */
+        int compile(string const &source_code) { throw NotImplementedException(); }
 
-        /* 比较 input 和 output 是否相同 */
-        virtual int diff(string input, string output) = 0;
+        virtual /* 在沙盒中运行程序 */
+        int run(string const &path, string const &args, string const &env,
+                string const &input, string &output) { throw NotImplementedException(); }
+
+        virtual /* 比较 input 和 output 是否相同 */
+        int diff(string const &input, string const &output) { throw NotImplementedException(); }
+
+        virtual /* 设置 seccomp 规则，每个语言都要自己设置一份 */
+        int setRules() { throw NotImplementedException(); }
 
         /* 设置语言名（全小写） */
         void setLang(string name) {
