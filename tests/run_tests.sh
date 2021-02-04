@@ -19,5 +19,6 @@
 #./juicer --language=cpp --sourcecode=./runtime-timeout.cpp
 
 
-mv /tmp/tmp.7TpESdgFAE/cmake-build-debug/juicer /tmp/tmp.7TpESdgFAE/tests; ./juicer --run-time-limit=1000 --case-in=1.in,2.in --case-out=1.out,2.out --language=cpp --sourcecode=./normal.cpp
+mv /tmp/tmp.7TpESdgFAE/cmake-build-debug/juicer /tmp/tmp.7TpESdgFAE/tests; ./juicer --run-time-limit=1000 --case-in=1.in,2.in --case-out=1.out,2.out --language=cpp --sourcecode=./runtime/runtime-timeout.cpp
 
+./juicer --run-time-limit=1000 --case-in=normal/hdu2041/1.in,normal/hdu2041/2.in,normal/hdu2041/3.in,normal/hdu2041/4.in,normal/hdu2041/5.in --case-out=normal/hdu2041/1.out,normal/hdu2041/2.out,normal/hdu2041/3.out,normal/hdu2041/4.out,normal/hdu2041/5.out --language=cpp --sourcecode=./normal/hdu2041/C.HDU-2041.cpp

@@ -6,11 +6,34 @@
 #include <fstream>
 #include <cstring>
 #include "sandbox.h"
-
+#include "syscall-names.h"
 #include "lang/gnu_cpp_compiler.h"
 
 #include "third_party/argh.h"
 #include "helper.h"
+
+#if defined(__i386__)
+#define REG_RESULT    REG_EAX
+#define REG_SYSCALL    REG_EAX
+#define REG_ARG0    REG_EBX
+#define REG_ARG1    REG_ECX
+#define REG_ARG2    REG_EDX
+#define REG_ARG3    REG_ESI
+#define REG_ARG4    REG_EDI
+#define REG_ARG5    REG_EBP
+#elif defined(__x86_64__)
+#define REG_RESULT    REG_RAX
+#define REG_SYSCALL    REG_RAX
+#define REG_ARG0    REG_RDI
+#define REG_ARG1    REG_RSI
+#define REG_ARG2    REG_RDX
+#define REG_ARG3    REG_R10
+#define REG_ARG4    REG_R8
+#define REG_ARG5    REG_R9
+#endif
+#ifndef SYS_SECCOMP
+#define SYS_SECCOMP 1
+#endif
 
 using std::cout;
 using std::cerr;
@@ -23,7 +46,69 @@ void signal_handler(int sig) {
         rusage usage{};
         //printf("child exit\n");
         wait(&stat);
+    } else if (sig == SIGSYS) {
+
     }
+}
+
+/* Since "sprintf" is technically not signal-safe, reimplement %d here. */
+static void write_uint(char *buf, unsigned int val) {
+    int width = 0;
+    unsigned int tens;
+
+    if (val == 0) {
+        strcpy(buf, "0");
+        return;
+    }
+    for (tens = val; tens; tens /= 10)
+        ++width;
+    buf[width] = '\0';
+    for (tens = val; tens; tens /= 10)
+        buf[--width] = (char) ('0' + (tens % 10));
+}
+
+static void helper(int nr, siginfo_t *info, void *void_context) {
+    char buf[255];
+    auto *ctx = (ucontext_t *) (void_context);
+    unsigned int syscall;
+
+    if (info->si_code != SYS_SECCOMP)
+        return;
+    if (!ctx)
+        return;
+
+    syscall = (unsigned int) ctx->uc_mcontext.gregs[REG_SYSCALL];
+    strcpy(buf, "Invalid system call: ");
+    if (syscall < sizeof(syscall_names)) {
+        strcat(buf, syscall_names[syscall]);
+        strcat(buf, "(");
+    }
+    write_uint(buf + strlen(buf), syscall);
+    if (syscall < sizeof(syscall_names))
+        strcat(buf, ")");
+    strcat(buf, "\n");
+    write(STDOUT_FILENO, buf, strlen(buf));
+}
+
+static int install_helper() {
+    syscall_names_init();
+    struct sigaction act;
+    sigset_t mask;
+    memset(&act, 0, sizeof(act));
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGSYS);
+
+    act.sa_sigaction = &helper;
+    act.sa_flags = SA_SIGINFO;
+    if (sigaction(SIGSYS, &act, NULL) < 0) {
+        perror("sigaction");
+        return -1;
+    }
+    if (sigprocmask(SIG_UNBLOCK, &mask, NULL)) {
+        perror("sigprocmask");
+        return -1;
+    }
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -34,6 +119,12 @@ int main(int argc, char *argv[]) {
     };
 
     signal(SIGCHLD, signal_handler);
+    signal(SIGSYS, signal_handler);
+
+    if (install_helper()) {
+        printf("install helper failed");
+        return 1;
+    }
 
     string title = "Juicer";
     string description = "MUST OJ backend core";
@@ -111,13 +202,15 @@ int main(int argc, char *argv[]) {
     source_code = JuicerHelper::read_file(program);
 
     try {
-        lang->set_configs(source_code, limit_compile_time, limit_run_time,
-                          limit_stack, limit_memory, limit_output,
-                          cases_in, cases_out);
+        lang->config(source_code, limit_compile_time, limit_run_time,
+                     limit_stack, limit_memory, limit_output,
+                     cases_in, cases_out);
         lang->compile();
+
         for (int i = 0; i < cases_in.size(); i++) {
-            lang->run(cases_in[i]);
-            lang->diff(cases_out[i]);
+            // iterate all cases
+            lang->run(i);
+            lang->diff(i);
         }
     } catch (const char *msg) {
         cerr << msg << endl;

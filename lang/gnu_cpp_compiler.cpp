@@ -40,14 +40,14 @@ int JuicerLang::GNU_cpp_compiler::compile() {
 }
 
 int
-JuicerLang::GNU_cpp_compiler::run(const string &input) {
+JuicerLang::GNU_cpp_compiler::run(const uint8_t &case_id) {
 
-    printf("\nGNU CPP stage: run - case %s\n", input.c_str());
+    printf("\nGNU CPP stage: run - case %s\n", this->cases_in[case_id].c_str());
 
     char *const args[] = {(char *) this->binary_path.c_str(), nullptr};
     char *const envp[] = {nullptr};
 
-    int fd_in = open(input.c_str(), O_RDONLY);
+    int fd_in = open(this->cases_in[case_id].c_str(), O_RDONLY);
     if (fd_in == -1) {
         perror("open");
         throw "open fd in failed";
@@ -78,9 +78,9 @@ JuicerLang::GNU_cpp_compiler::run(const string &input) {
     return 0;
 }
 
-int JuicerLang::GNU_cpp_compiler::diff(const string &standard_output) {
+int JuicerLang::GNU_cpp_compiler::diff(const uint8_t &case_id) {
     string output = JuicerHelper::read_file(this->output_file);
-    string standard = JuicerHelper::read_file(standard_output);
+    string standard = JuicerHelper::read_file(this->cases_out[case_id]);
     JuicerHelper::trim(output);
     JuicerHelper::trim(standard);
 

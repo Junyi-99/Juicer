@@ -46,7 +46,7 @@ namespace JuicerSandbox {
 
     void sandbox(const string &path) {
         scmp_filter_ctx ctx;
-        if ((ctx = seccomp_init(SCMP_ACT_KILL)) == nullptr) {
+        if ((ctx = seccomp_init(SCMP_ACT_TRAP)) == nullptr) {
             throw "seccomp_init failed";
         }
 
@@ -145,7 +145,8 @@ namespace JuicerSandbox {
                 exit(1);
             }
 
-            if (WIFSIGNALED(status) != 0) {
+            // if the child process was terminated by a signal
+            if (WIFSIGNALED(status)) {
                 printf("term sig: %d (%s)\n", WTERMSIG(status), strsignal(WTERMSIG(status)));
             }
             printf("exit code: \t%d\n", WEXITSTATUS(status));
