@@ -28,8 +28,6 @@ namespace JuicerLang {
         int run(const uint8_t &case_id) override;
 
         int diff(const uint8_t &case_id) override;
-
-        int setRules() override;
     };
 }
 

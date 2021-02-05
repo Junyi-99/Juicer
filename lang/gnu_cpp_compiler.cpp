@@ -109,7 +109,3 @@ int JuicerLang::GNU_cpp_compiler::diff(const uint8_t &case_id) {
     }
 }
 
-int JuicerLang::GNU_cpp_compiler::setRules() {
-    return 0;
-}
-

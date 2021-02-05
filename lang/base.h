@@ -26,9 +26,6 @@ namespace JuicerLang {
         /* 比较 input 和 output 是否相同 */
         virtual int diff(const uint8_t &case_id) { throw NotImplementedException(); }
 
-        virtual /* 设置 seccomp 规则，每个语言都要自己设置一份 */
-        int setRules() { throw NotImplementedException(); }
-
         void
         config(const string &code_source, const uint32_t &compile_time_limit, const uint32_t &run_time_limit,
                const uint32_t &stack_limit, const uint32_t &memory_limit, const uint32_t &output_limit,

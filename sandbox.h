@@ -26,7 +26,7 @@ namespace JuicerSandbox {
 
     /*
     内部进行 fork，并且开启线程监视被执行程序
-    不限制 system call 的调用
+    可选是否限制 system call 的调用（通过 enable_sandbox）
     该方法可以用于编译控制，以及目标程序控制
 
      fd_in 你想让它的 stdin 从哪读？
