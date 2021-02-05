@@ -12,6 +12,10 @@
 #include <fcntl.h>
 #include <string>
 #include <vector>
+#include <csignal>
+#include <cstring>
+#include <wait.h>
+#include "helper.h"
 
 using std::string;
 using std::vector;

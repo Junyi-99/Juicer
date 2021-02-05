@@ -1,9 +1,7 @@
 #include <iostream>
 #include <unistd.h>
-#include <pthread.h>
 #include <map>
 #include <wait.h>
-#include <fstream>
 #include <cstring>
 #include "sandbox.h"
 #include "syscall-names.h"
@@ -100,18 +98,20 @@ static int install_helper() {
 
     act.sa_sigaction = &helper;
     act.sa_flags = SA_SIGINFO;
-    if (sigaction(SIGSYS, &act, NULL) < 0) {
-        perror("sigaction");
-        return -1;
+    if (sigaction(SIGSYS, &act, nullptr) < 0) {
+        std::string details("SYSTEM_ERROR");
+        details += "sigaction failed: " + std::string(strerror(errno));
+        throw ResultException(ResultType::SYSTEM_ERROR, details);
     }
-    if (sigprocmask(SIG_UNBLOCK, &mask, NULL)) {
-        perror("sigprocmask");
-        return -1;
+    if (sigprocmask(SIG_UNBLOCK, &mask, nullptr)) {
+        std::string details("SYSTEM_ERROR");
+        details += "sigprocmask failed: " + std::string(strerror(errno));
+        throw ResultException(ResultType::SYSTEM_ERROR, details);
     }
     return 0;
 }
 
-int main(int argc, char *argv[]) {
+void proc(int argc, char *argv[]) {
 
     std::vector<JuicerLang::Base *> supported_lang = {
             // &JuicerLang::GNU_c_compiler::getInstance(),
@@ -121,10 +121,8 @@ int main(int argc, char *argv[]) {
     signal(SIGCHLD, signal_handler);
     signal(SIGSYS, signal_handler);
 
-    if (install_helper()) {
-        printf("install helper failed");
-        return 1;
-    }
+    if (install_helper())
+        throw ResultException(ResultType::SYSTEM_ERROR, "install helper failed");
 
     string title = "Juicer";
     string description = "MUST OJ backend core";
@@ -148,30 +146,30 @@ int main(int argc, char *argv[]) {
     if (argc == 1 || cmd[{"--help", "-h"}]) {
         cout << title << " " << version << " " << endl;
         cout << description << endl;
-        return EXIT_SUCCESS;
+        exit(EXIT_SUCCESS);
     } else if (cmd["version"]) {
         cout << title << " version: " << version << endl;
-        return EXIT_SUCCESS;
+        exit(EXIT_SUCCESS);
     }
 
     if (!(cmd("--sourcecode") >> program)) {
         cerr << "Must provide file path to `--sourcecode`" << endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (!(cmd("--language") >> language)) {
         cerr << "Must provide a `--language` for the specific source ret" << endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (!(cmd("--case-in") >> case_in)) {
         cerr << "Must provide case in" << endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if (!(cmd("--case-out") >> case_out)) {
         cerr << "Must provide case out" << endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     vector<string> cases_in;
@@ -181,7 +179,7 @@ int main(int argc, char *argv[]) {
     cases_out = JuicerHelper::split(case_out);
     if (cases_in.size() != cases_out.size()) {
         cerr << "The number of case in and case out are not match." << endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     cmd("--limit-compile-time-ms", 3000) >> limit_compile_time;
@@ -194,26 +192,44 @@ int main(int argc, char *argv[]) {
 
     for (auto &i: supported_lang) if (i->getLang() == language) lang = i;
     if (lang == nullptr) {
-        printf("No such language: %s\n", language.c_str());
-        exit(1);
+        std::string details("SYSTEM_ERROR");
+        details += "no such language: " + language;
+        throw ResultException(ResultType::SYSTEM_ERROR, details);
     }
 
     /* Read the file, compile it. */
     source_code = JuicerHelper::read_file(program);
 
-    try {
-        lang->config(source_code, limit_compile_time, limit_run_time,
-                     limit_stack, limit_memory, limit_output,
-                     cases_in, cases_out);
-        lang->compile();
 
-        for (int i = 0; i < cases_in.size(); i++) {
-            // iterate all cases
+    lang->config(source_code, limit_compile_time, limit_run_time,
+                 limit_stack, limit_memory, limit_output,
+                 cases_in, cases_out);
+    lang->compile();
+
+    for (int i = 0; i < cases_in.size(); i++) {
+        try {
             lang->run(i);
             lang->diff(i);
+        } catch (ResultException &e) {
+            if (e.what_type() == ResultType::COMPILE_ERROR ||
+                e.what_type() == ResultType::SYSTEM_ERROR) {
+                throw ResultException(e.what_type(), e.what());
+            } else {
+                cout << (int) e.what_type() << endl;
+                cout << e.what() << endl;
+                continue;
+            }
         }
-    } catch (const char *msg) {
-        cerr << msg << endl;
+    }
+}
+
+int main(int argc, char *argv[]) {
+
+    try {
+        proc(argc, argv);
+    } catch (ResultException &e) {
+        //cout << (int) e.what_type() << endl;
+        cout << e.what() << endl;
     }
 
     wait(nullptr);

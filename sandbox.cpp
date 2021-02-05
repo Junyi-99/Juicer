@@ -2,9 +2,7 @@
 // Created by Junyi Hou on 2/2/21.
 //
 
-#include <csignal>
-#include <cstring>
-#include <wait.h>
+
 #include "sandbox.h"
 
 namespace JuicerSandbox {
@@ -34,8 +32,9 @@ namespace JuicerSandbox {
 
         if (pthread_detach(pthread_self()) != 0) {
             killpg(p->pgid, SIGKILL);
-            perror("pthread_detach");
-            exit(1);
+            std::string details("SYSTEM_ERROR");
+            details += "pthread_detach failed: " + std::string(strerror(errno));
+            throw ResultException(ResultType::SYSTEM_ERROR, details);
         }
 
         usleep(p->sleep_time * 1000);
@@ -47,12 +46,16 @@ namespace JuicerSandbox {
     void sandbox(const string &path) {
         scmp_filter_ctx ctx;
         if ((ctx = seccomp_init(SCMP_ACT_TRAP)) == nullptr) {
-            throw "seccomp_init failed";
+            std::string details("SYSTEM_ERROR");
+            details += "seccomp_init failed: " + std::string(strerror(errno));
+            throw ResultException(ResultType::SYSTEM_ERROR, details);
         }
 
         for (int i : white_list) {
             if (seccomp_rule_add(ctx, SCMP_ACT_ALLOW, i, 0) != 0) {
-                throw "seccomp_rule_add failed";
+                std::string details("SYSTEM_ERROR");
+                details += "seccomp_rule_add failed: " + std::string(strerror(errno));
+                throw ResultException(ResultType::SYSTEM_ERROR, details);
             }
         }
         // TODO: return value check
@@ -62,7 +65,11 @@ namespace JuicerSandbox {
                          SCMP_CMP(2, SCMP_CMP_MASKED_EQ, O_WRONLY | O_RDWR, 0));
         seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
                          SCMP_CMP(1, SCMP_CMP_MASKED_EQ, O_WRONLY | O_RDWR, 0));
-        if (seccomp_load(ctx) != 0) throw "seccomp_load failed";
+        if (seccomp_load(ctx) != 0) {
+            std::string details("SYSTEM_ERROR");
+            details += "seccomp_load failed: " + std::string(strerror(errno));
+            throw ResultException(ResultType::SYSTEM_ERROR, details);
+        }
         seccomp_release(ctx); // does not return a value
     }
 
@@ -76,8 +83,9 @@ namespace JuicerSandbox {
         pid_t pid = fork();
 
         if (pid < 0) {
-            printf("fork failed\n");
-            exit(1);
+            std::string details("SYSTEM_ERROR\n");
+            details += "fork failed: " + std::string(strerror(errno));
+            throw ResultException(ResultType::SYSTEM_ERROR, details);
         } else if (pid == 0) {
             // child
             struct rlimit rlimit_nproc{
@@ -110,7 +118,11 @@ namespace JuicerSandbox {
             };
             /* RLIMIT_CPU 不统计使用了 sleep() 的程序，所以必须靠另外线程来侦测运行时间 */
             for (int i : ret) {
-                if (i != 0) throw "set rlimit failed";
+                if (i != 0) {
+                    std::string details("SYSTEM_ERROR\n");
+                    details += "setrlimit failed: " + std::string(strerror(errno));
+                    throw ResultException(ResultType::SYSTEM_ERROR, details);
+                }
             }
             if (fd_out != STDOUT_FILENO)
                 dup2(fd_out, STDOUT_FILENO);
@@ -134,17 +146,19 @@ namespace JuicerSandbox {
 
             ret = pthread_create(&monitor, nullptr, timeout_killer, reinterpret_cast<void *>(&args));
             if (ret != 0) {
-                perror("pthread_create");
                 killpg(pid, SIGKILL);
-                exit(1);
+                std::string details("SYSTEM_ERROR\n");
+                details += "pthread_create failed: " + std::string(strerror(errno));
+                throw ResultException(ResultType::SYSTEM_ERROR, details);
             }
 
             if (wait4(pid, &status, WSTOPPED, &usage) == -1) {
-                perror("wait4");
                 killpg(pid, SIGKILL);
-                exit(1);
+                std::string details("SYSTEM_ERROR\n");
+                details += "wait4 failed: " + std::string(strerror(errno));
+                throw ResultException(ResultType::SYSTEM_ERROR, details);
             }
-
+            strerror(errno);
             // if the child process was terminated by a signal
             if (WIFSIGNALED(status)) {
                 printf("term sig: %d (%s)\n", WTERMSIG(status), strsignal(WTERMSIG(status)));
@@ -153,7 +167,6 @@ namespace JuicerSandbox {
             printf("user mode: \t%ld ms\n", usage.ru_utime.tv_sec * 1000 + usage.ru_utime.tv_usec / 1000);
             printf("kernel mode: \t%ld ms\n", usage.ru_stime.tv_sec * 1000 + usage.ru_stime.tv_usec / 1000);
             printf("memory:\t\t%ld KB\n", usage.ru_maxrss);
-
 
             return status;
         }

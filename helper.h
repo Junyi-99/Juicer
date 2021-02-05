@@ -12,6 +12,44 @@
 #include <cctype>
 #include <locale>
 
+enum class ResultType {
+    NO_SUCH_PROBLEM,
+    SYSTEM_ERROR,
+    COMPILE_ERROR,
+
+    ACCEPTED,
+    WRONG_ANSWER,
+    PRESENTATION_ERROR,
+    RUNTIME_ERROR,
+    TIME_LIMIT_EXCEED,
+    MEMORY_LIMIT_EXCEED,
+    OUTPUT_LIMIT_EXCEED,
+    NON_ZERO_EXIT_ERROR,
+    SEGMENTATION_FAULT,
+    FLOAT_POINT_EXCEPTION, // Divide by 0
+    VALIDATE_ERROR,
+};
+
+class ResultException : public std::exception {
+public:
+    explicit ResultException(ResultType type, const std::string &details) {
+        result_type = type;
+        error_message = details;
+    }
+
+    ResultType what_type() {
+        return result_type;
+    }
+
+    const char *what() const noexcept override {
+        return error_message.c_str();
+    }
+
+private:
+    ResultType result_type;
+    std::string error_message;
+};
+
 class NotImplementedException : public std::exception {
 public:
     explicit NotImplementedException(const char *error = "Function not yet implemented.") {

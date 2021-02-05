@@ -28,13 +28,23 @@ int JuicerLang::GNU_cpp_compiler::compile() {
                           nullptr};
     char *const envp[] = {nullptr};
     printf("\nGNU CPP stage: compile\n");
+
+    int fd_out = open(this->compile_log.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd_out == -1) {
+        std::string details("SYSTEM_ERROR\n");
+        details += "open fd_out failed: " + std::string(strerror(errno));
+        throw ResultException(ResultType::SYSTEM_ERROR, details);
+    }
+
     // compiler should not enable sandbox
-    int ret = JuicerSandbox::run_with_constrains(STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO,
+    int ret = JuicerSandbox::run_with_constrains(STDIN_FILENO, fd_out, fd_out,
                                                  path, args, envp,
                                                  this->limit_compile_time, 256 * 1024, 256 * 1024, 1024, false);
     if (ret != 0) {
-        printf("result:\t\t[Compilation Error]\n");
-        throw "Compilation Error";
+        // TODO: compile log return
+        std::string details("COMPILE_ERROR\n");
+        details += "return code: " + std::to_string(ret);
+        throw ResultException(ResultType::COMPILE_ERROR, details);
     }
     return ret;
 }
@@ -49,14 +59,16 @@ JuicerLang::GNU_cpp_compiler::run(const uint8_t &case_id) {
 
     int fd_in = open(this->cases_in[case_id].c_str(), O_RDONLY);
     if (fd_in == -1) {
-        perror("open");
-        throw "open fd in failed";
+        std::string details("SYSTEM_ERROR\n");
+        details += "open fd_in failed: " + std::string(strerror(errno));
+        throw ResultException(ResultType::SYSTEM_ERROR, details);
     }
 
     int fd_out = open(this->output_file.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd_out == -1) {
-        perror("open");
-        throw "open fd out failed";
+        std::string details("SYSTEM_ERROR\n");
+        details += "open fd_out failed: " + std::string(strerror(errno));
+        throw ResultException(ResultType::SYSTEM_ERROR, details);
     }
 
     int ret = JuicerSandbox::run_with_constrains(
@@ -71,9 +83,10 @@ JuicerLang::GNU_cpp_compiler::run(const uint8_t &case_id) {
     close(fd_out);
 
     if (ret != 0) {
-        printf("with error: %d, judge terminated.\n", ret);
-        printf("result:\t\t[Runtime Error]\n");
-        throw "Runtime Error";
+        std::string details("RUNTIME_ERROR\n");
+        details += "return code: " + std::to_string(ret);
+        details += ", Judge terminated.";
+        throw ResultException(ResultType::RUNTIME_ERROR, details);
     }
     return 0;
 }
@@ -85,13 +98,15 @@ int JuicerLang::GNU_cpp_compiler::diff(const uint8_t &case_id) {
     JuicerHelper::trim(standard);
 
     if (output == standard) {
-        printf("result:\t\t[ACCEPTED]\n");
+        std::string details = "ACCEPTED\n";
+        throw ResultException(ResultType::ACCEPTED, details);
     } else {
-        printf("result:\t\t[Wrong Answer]\n");
-        printf("output  : %s\n", output.c_str());
-        printf("standard: %s\n", standard.c_str());
+        std::string details("WRONG_ANSWER\n");
+        details += "output  : " + output + "\n";
+        details += "standard: ";
+        details += standard;
+        throw ResultException(ResultType::WRONG_ANSWER, details);
     }
-    return 0;
 }
 
 int JuicerLang::GNU_cpp_compiler::setRules() {

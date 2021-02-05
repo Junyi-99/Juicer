@@ -58,6 +58,7 @@ namespace JuicerLang {
         vector<string> cases_in;         // 文件路径
         vector<string> cases_out;        // 文件路径
         string output_file = "output.txt"; /* 重定向 stdout 到这个文件 */
+        string compile_log = "compile_log.txt"; /* 重定向 stdout 到这个文件 */
 
     protected:
         string lang_name = "none";
